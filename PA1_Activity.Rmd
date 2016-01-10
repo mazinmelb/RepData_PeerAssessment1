@@ -1,17 +1,16 @@
 ---
 title: "Reproducible Research: Peer Assessment 1"
 author: "MazinMelb"
-date: "9 Jan 2016"
+date: "10 Jan 2016"
 output: 
   html_document:
     keep_md: true
 ---
-
-
-## Loading and preprocessing the data
+## Overview
+This report is considering the activity data recorded by a device collecting data at 5 minute intervals through out the day. The data consists of two months activity from an anonymous individual collected over two months, October and November, 2012 ,and includes the number of steps taken in 5 minute intervals each day.
 
 ```{r global_options, include=FALSE}
-knitr::opts_chunk$set(fig.width=6, fig.height=6,warning=FALSE, message=FALSE)
+knitr::opts_chunk$set(fig.width=10, fig.height=5,warning=FALSE, message=FALSE)
 ```
 ```{r load_packages, include=FALSE}
 library(dplyr)
@@ -19,13 +18,17 @@ library(ggplot2)
 library(scales)
 library(stringr)
 library(grid)
+library(gridExtra)
 ```
 
 
+
+## Loading and preprocessing the data
+
+The data has been cleaned and transformed to facilitate visualisation and analysis. The time and date details have been converted into a 'r' date format (POSIXct) and there is a boolean field set to true for weekdays and false for weekends. 
+
 ```{r}
-
 setwd("~/Documents/RepData_PeerAssessment1")
-
 fname <- "activity.csv"
 activities <- read.csv(fname)
 
@@ -40,53 +43,27 @@ timeperiod <- sapply(timechar,function(x)
                     str_c(substr(x,1,2),":",substr(x,3,4)))
 
 activities <- cbind(activities,timeperiod)
+```
 
 
-# summarise mean and median for each interval (ignore NAs)
+The data has been summarised by day, to show the total, mean and median number of steps by day. 
+```{r}
 actsummary <- activities %>%
               group_by(date) %>%
-              summarise(msteps = mean(steps,na.rm=TRUE),
+              summarise(totsteps=sum(steps,na.rm=TRUE),
+                        msteps = mean(steps,na.rm=TRUE),
                         medsteps = median(steps,na.rm=TRUE),
-                        min(steps,na.rm=TRUE),
-                        max(steps,na.rm=TRUE),
                         weekday=unique(weekday))
-
-
 ```
 
+It has also been summarised by 5-minute interval to show the daily pattern of activity.
 
-
-
-## What is mean total number of steps taken per day?
-
-```{r, echo=FALSE}
-# graph activities to show total steps per day
-g <- ggplot(data.frame(actsummary), aes(x=as.Date(date),y=msteps, fill=weekday))  + 
-     geom_histogram(stat="identity",binwidth = 7) +
-  xlab("Date") + ylab("Number of steps") +
-  scale_x_date(labels = date_format("%d-%m-%Y"),breaks=date_breaks("week")) +
-  theme(axis.text.x=element_text(angle=90))+
-  scale_fill_discrete(name = "Type of day",
-                      breaks=c(FALSE,TRUE),
-                      labels=c("Weekend","Weekday")) +
-  ggtitle("Number of steps each day") 
-print(g)
-
-```
-
-
-## What is the average daily activity pattern?
-
-
-```{r, echo=FALSE}
-
+```{r}
 daysummary <- activities %>%
       group_by(timeperiod) %>%
       summarise(totsteps = sum(steps,na.rm=TRUE),
             msteps = mean(steps,na.rm=TRUE),
             medsteps=median(steps,na.rm=TRUE),
-            minsteps=min(steps,na.rm=TRUE),
-            maxsteps=max(steps,na.rm=TRUE),
             interval=unique(interval))
 
 maxmsteps <- filter(daysummary,msteps==max(msteps))
@@ -97,36 +74,72 @@ nbtext <- paste("  NB: Maximum (average \n  in a 5 minute interval) \n  is",
 # convert timeperiod into date/time format for graphing
 maxmsteps$timeperiod=strptime(maxmsteps$timeperiod,format="%H:%M")
 daysummary$timeperiod=strptime(daysummary$timeperiod,format="%H:%M")
-
-
 ``` 
+
+
+
+
+
+# Summary of steps per day
+
+## What is total and summarised number of steps taken per day (ignore NAs)?
+
+Visualising the number of steps each day highlights the missing values. As can be seen in the graph below, the median number of steps per day is significantly affected by the missing data. The total number of steps, and the mean and median number of steps taken per day is shown below:
+
+```{r, echo=FALSE}
+
+# graph activities to show total steps per day
+g1 <- ggplot(data.frame(actsummary), aes(x=as.Date(date),y=totsteps, fill=weekday))  + 
+     geom_histogram(stat="identity",binwidth = 7) +
+  xlab("Date") + ylab("Number of steps") +
+  scale_x_date(labels = date_format("%d-%m-%Y"),breaks=date_breaks("week")) +
+  theme(axis.text.x=element_text(angle=90)) +
+  scale_fill_discrete(name = "Type of day",
+                      breaks=c(FALSE,TRUE),
+                      labels=c("Weekend","Weekday")) +
+  ggtitle("Total number of steps (ignore NAs)") 
+
+# graph activities to show total steps per day
+g2 <- ggplot(data.frame(actsummary), aes(x=as.Date(date)))  + 
+     geom_line(stat="identity",aes(y=medsteps, colour="Median steps")) +
+     geom_line(stat="identity",aes(y=msteps, colour="Mean steps")) +
+  xlab("Date") + ylab("Number of steps") +
+  scale_x_date(labels = date_format("%d-%m-%Y"),breaks=date_breaks("week")) +
+  scale_color_discrete(name="Summary of steps by interval")+
+  theme(axis.text.x=element_text(angle=90)) +
+  ggtitle("Mean, median of steps (ignore NAs)") 
+
+  grid.arrange(g1,g2,ncol=2)
+```
+
+
+# Summary of daily activity pattern
+## Daily pattern of activity (ignoring NAs)
+The patern of daily activity, without imputing values for missing data, that is, any missing data has been ignormed, shows a difference in activity during the night hours (on the left and right of the graph), and the daytime hours (in the middle of the graph).
 
 ```{r, echo=FALSE}
 # graph daily pattern of activity
 
-g <- ggplot(daysummary,aes(x=timeperiod,y=msteps,group=1)) +
-     geom_line(stat="identity", colour="black") +
-     geom_line(stat="identity", colour="orange",aes(y=medsteps)) +
-     annotate(geom="text", x=maxmsteps$timeperiod, y=maxmsteps$msteps, label=nbtext, colour="blue",hjust=0,vjust=1) +
- #            , size=7, family="Courier") +
+g <- ggplot(daysummary,aes(x=timeperiod)) +
+     geom_line(stat="identity",aes(y=medsteps, colour="Median steps")) +
+     geom_line(stat="identity",aes(y=msteps, colour="Mean steps")) +
+     annotate(geom="text", x=maxmsteps$timeperiod, y=maxmsteps$msteps,
+              label=nbtext,hjust=0,vjust=1,size=3) +
      xlab("5-minute interval") + ylab("Number of steps") +
+     theme(axis.text.x=element_text(angle=90)) +
      scale_x_datetime(labels=date_format("%H:%M"),        
-                      breaks=date_breaks("2 hours"))  
-# +     stat_summary(fun.y = maxcol, geom = "point", color = "red", size = 5)
-#     theme(axis.text.x=element_text(angle=90))+
-     ggtitle("Number of steps each interval") 
+                      breaks=date_breaks("2 hours"))  +
+      scale_color_discrete(name="Summary of steps by interval")+
+     ggtitle("Number of steps each interval (ignore NAs)") 
 print(g)
-
 ```
-
 
 ## Imputing missing values
 
+Examining the activity data suggests there are intervals and days where no activity data was logged. Assuming this is a gap in the data, rather than the highly unlikely complete and total absence of any trackable activity, the missing days and intervals will be replaced with the mean number of steps for that interval across all the logged days.
 
-```{r, echo=FALSE}
-# replace na with mean for that interval
-# select na steps only ??? split or select
-
+```{r}
+# replace na with mean for that interval using a split apply combine approach
 activitiesValue <- filter(activities,!is.na(steps))
 activitiesNA <- filter(activities,is.na(steps))
 
@@ -136,22 +149,28 @@ activitiesNA$steps <- meansteps$msteps
 
 activities2 <- rbind(activitiesValue,activitiesNA)
 
-```
+# summarise steps per day with imputed values
+actsummary2 <- activities2 %>%
+               group_by(date) %>%
+               summarise(totsteps=sum(steps,na.rm=TRUE),
+                         msteps = mean(steps,na.rm=TRUE),
+                         medsteps = median(steps,na.rm=TRUE),
+                         weekday=unique(weekday))
 
-
-## What is the average daily activity pattern?
-
-
-```{r, echo=FALSE}
-
+# summarise steps per interval with imputed values
 daysummary2 <- activities2 %>%
       group_by(timeperiod) %>%
       summarise(totsteps = sum(steps,na.rm=TRUE),
             msteps = mean(steps,na.rm=TRUE),
             medsteps=median(steps,na.rm=TRUE),
-            minsteps=min(steps,na.rm=TRUE),
-            maxsteps=max(steps,na.rm=TRUE),
             interval=unique(interval))
+
+daysummary2b <- activities2 %>%
+                group_by(timeperiod, weekday) %>%
+                summarise(totsteps = sum(steps,na.rm=TRUE),
+                          interval=unique(interval))
+daysummary2b$weekday <- sapply(daysummary2b$weekday, function(x)
+                                ifelse(x,"Weekday","Weekend"))
 
 maxmsteps <- filter(daysummary2,msteps==max(msteps))
 nbtext <- paste("  NB: Maximum (average \n  in a 5 minute interval) \n  is", 
@@ -161,28 +180,75 @@ nbtext <- paste("  NB: Maximum (average \n  in a 5 minute interval) \n  is",
 # convert timeperiod into date/time format for graphing
 maxmsteps$timeperiod=strptime(maxmsteps$timeperiod,format="%H:%M")
 daysummary2$timeperiod=strptime(daysummary2$timeperiod,format="%H:%M")
-
-
-``` 
-
-```{r, echo=FALSE}
-# graph daily pattern of activity
-
-g <- ggplot(daysummary2,aes(x=timeperiod,y=msteps,group=1)) +
-     geom_line(stat="identity", colour="black") +
-     geom_line(stat="identity", colour="orange",aes(y=medsteps)) +
-     annotate(geom="text", x=maxmsteps$timeperiod, y=maxmsteps$msteps, label=nbtext, colour="blue",hjust=0,vjust=1) +
- #            , size=7, family="Courier") +
-     xlab("5-minute interval") + ylab("Number of steps") +
-     scale_x_datetime(labels=date_format("%H:%M"),        
-                      breaks=date_breaks("2 hours"))  
-# +     stat_summary(fun.y = maxcol, geom = "point", color = "red", size = 5)
-#     theme(axis.text.x=element_text(angle=90))+
-     ggtitle("Number of steps each interval") 
-print(g)
-
 ```
 
 
+## Daily pattern of activity (imputed values)?
+
+```{r, echo=FALSE}
+# graph daily pattern of activity
+g <- ggplot(daysummary2,aes(x=timeperiod,y=msteps,group=1)) +
+     geom_line(stat="identity",aes(y=medsteps, colour="Median steps")) +
+     geom_line(stat="identity",aes(y=msteps, colour="Mean steps")) +
+     annotate(geom="text", x=maxmsteps$timeperiod, y=maxmsteps$msteps,
+              label=nbtext,hjust=0,vjust=1,size=3) +
+     xlab("5-minute interval") + ylab("Number of steps") +
+     theme(axis.text.x=element_text(angle=90)) +
+     scale_x_datetime(labels=date_format("%H:%M"),        
+                      breaks=date_breaks("2 hours"))  +
+      scale_color_discrete(name="Summary of steps by interval")+
+     ggtitle("Number of steps each interval (imputed values)") 
+print(g)
+```
+
+## What is total number of steps taken per day (imputed values)?
+
+Visualising the number of steps each day after replacing NAs with the mean number of steps for that interval across days, shows a different pattern. As can be seen in the graph below, the median number of steps per day follows a pattern closer to the mean. 
+
+The pattern of median number of steps per interval still varies from the mean number of steps per interval because of the number of 0 values recorded for some intervals. Without a better understanding of the recording mechanism it is unclear whether it would be appropriate to replace '0' values wiht the mean values.
+
+The total number of steps, and the mean and median number of steps taken per day after replacing NAs with the mean values for that interval, are shown below:
+
+```{r, echo=FALSE}
+
+# graph activities to show total steps per day
+g1 <- ggplot(data.frame(actsummary2), aes(x=as.Date(date),y=totsteps, fill=weekday))  + 
+     geom_histogram(stat="identity",binwidth = 7) +
+  xlab("Date") + ylab("Number of steps") +
+  scale_x_date(labels = date_format("%d-%m-%Y"),breaks=date_breaks("week")) +
+  theme(axis.text.x=element_text(angle=90)) +
+  scale_fill_discrete(name = "Type of day",
+                      breaks=c(FALSE,TRUE),
+                      labels=c("Weekend","Weekday")) +
+  ggtitle("Total number of steps (imputed values)") 
+
+# graph activities to show total steps per day
+g2 <- ggplot(data.frame(actsummary2), aes(x=as.Date(date)))  + 
+     geom_line(stat="identity",aes(y=medsteps, colour="Median steps")) +
+     geom_line(stat="identity",aes(y=msteps, colour="Mean steps")) +
+  xlab("Date") + ylab("Number of steps") +
+  scale_x_date(labels = date_format("%d-%m-%Y"),breaks=date_breaks("week")) +
+  scale_color_discrete(name="Summary of steps by interval")+
+  theme(axis.text.x=element_text(angle=90)) +
+  ggtitle("Mean, median of steps (imputed values)") 
+
+  grid.arrange(g1,g2,ncol=2)
+```
+
+
+
 ## Are there differences in activity patterns between weekdays and weekends?
+
+The graph below visualises the different activities patterns between weekdays and weekends. As might be expected, there is less activty on the weekends and more activity (measured in total number of steps for each interval) on weekdays.
+
+```{r, echo=FALSE}
+# graph daily pattern of activity
+g <- ggplot(daysummary2b,aes(x=interval,y=totsteps)) +
+     geom_line(stat="identity") +
+     xlab("5-minute interval") + ylab("Number of steps") +
+     theme(axis.text.x=element_text(angle=90)) +
+     ggtitle("Number of steps each interval (imputed values)") +
+     facet_grid(weekday ~ .)
+print(g)
+```
 

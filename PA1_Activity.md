@@ -1,18 +1,21 @@
 # Reproducible Research: Peer Assessment 1
 MazinMelb  
-9 Jan 2016  
+10 Jan 2016  
+## Overview
+This report is considering the activity data recorded by a device collecting data at 5 minute intervals through out the day. The data consists of two months activity from an anonymous individual collected over two months, October and November, 2012 ,and includes the number of steps taken in 5 minute intervals each day.
+
+
+
+
 
 
 ## Loading and preprocessing the data
 
-
-
-
+The data has been cleaned and transformed to facilitate visualisation and analysis. The time and date details have been converted into a 'r' date format (POSIXct) and there is a boolean field set to true for weekdays and false for weekends. 
 
 
 ```r
 setwd("~/Documents/RepData_PeerAssessment1")
-
 fname <- "activity.csv"
 activities <- read.csv(fname)
 
@@ -27,65 +30,129 @@ timeperiod <- sapply(timechar,function(x)
                     str_c(substr(x,1,2),":",substr(x,3,4)))
 
 activities <- cbind(activities,timeperiod)
+```
 
 
-# summarise mean and median for each interval (ignore NAs)
+The data has been summarised by day, to show the total, mean and median number of steps by day. 
+
+```r
 actsummary <- activities %>%
               group_by(date) %>%
-              summarise(msteps = mean(steps,na.rm=TRUE),
+              summarise(totsteps=sum(steps,na.rm=TRUE),
+                        msteps = mean(steps,na.rm=TRUE),
                         medsteps = median(steps,na.rm=TRUE),
-                        min(steps,na.rm=TRUE),
-                        max(steps,na.rm=TRUE),
                         weekday=unique(weekday))
 ```
 
+It has also been summarised by 5-minute interval to show the daily pattern of activity.
 
 
+```r
+daysummary <- activities %>%
+      group_by(timeperiod) %>%
+      summarise(totsteps = sum(steps,na.rm=TRUE),
+            msteps = mean(steps,na.rm=TRUE),
+            medsteps=median(steps,na.rm=TRUE),
+            interval=unique(interval))
 
-## What is mean total number of steps taken per day?
+maxmsteps <- filter(daysummary,msteps==max(msteps))
+nbtext <- paste("  NB: Maximum (average \n  in a 5 minute interval) \n  is", 
+                signif(maxmsteps$msteps,3),
+                "steps at",maxmsteps$timeperiod)
 
-![](PA1_Activity_files/figure-html/unnamed-chunk-2-1.png) 
-
-
-## What is the average daily activity pattern?
-
-
-
-
-
+# convert timeperiod into date/time format for graphing
+maxmsteps$timeperiod=strptime(maxmsteps$timeperiod,format="%H:%M")
+daysummary$timeperiod=strptime(daysummary$timeperiod,format="%H:%M")
 ```
-## $title
-## [1] "Number of steps each interval"
-## 
-## attr(,"class")
-## [1] "labels"
-```
+
+
+
+
+
+# Summary of steps per day
+
+## What is total and summarised number of steps taken per day (ignore NAs)?
+
+Visualising the number of steps each day highlights the missing values. As can be seen in the graph below, the median number of steps per day is significantly affected by the missing data. The total number of steps, and the mean and median number of steps taken per day is shown below:
 
 ![](PA1_Activity_files/figure-html/unnamed-chunk-4-1.png) 
 
 
+# Summary of daily activity pattern
+## Daily pattern of activity (ignoring NAs)
+The patern of daily activity, without imputing values for missing data, that is, any missing data has been ignormed, shows a difference in activity during the night hours (on the left and right of the graph), and the daytime hours (in the middle of the graph).
+
+![](PA1_Activity_files/figure-html/unnamed-chunk-5-1.png) 
+
 ## Imputing missing values
 
+Examining the activity data suggests there are intervals and days where no activity data was logged. Assuming this is a gap in the data, rather than the highly unlikely complete and total absence of any trackable activity, the missing days and intervals will be replaced with the mean number of steps for that interval across all the logged days.
 
 
+```r
+# replace na with mean for that interval using a split apply combine approach
+activitiesValue <- filter(activities,!is.na(steps))
+activitiesNA <- filter(activities,is.na(steps))
 
+# replace na values with mean for that interval
+meansteps <- merge(activitiesNA,daysummary,by="interval") 
+activitiesNA$steps <- meansteps$msteps
 
-## What is the average daily activity pattern?
+activities2 <- rbind(activitiesValue,activitiesNA)
 
+# summarise steps per day with imputed values
+actsummary2 <- activities2 %>%
+               group_by(date) %>%
+               summarise(totsteps=sum(steps,na.rm=TRUE),
+                         msteps = mean(steps,na.rm=TRUE),
+                         medsteps = median(steps,na.rm=TRUE),
+                         weekday=unique(weekday))
 
+# summarise steps per interval with imputed values
+daysummary2 <- activities2 %>%
+      group_by(timeperiod) %>%
+      summarise(totsteps = sum(steps,na.rm=TRUE),
+            msteps = mean(steps,na.rm=TRUE),
+            medsteps=median(steps,na.rm=TRUE),
+            interval=unique(interval))
 
+daysummary2b <- activities2 %>%
+                group_by(timeperiod, weekday) %>%
+                summarise(totsteps = sum(steps,na.rm=TRUE),
+                          interval=unique(interval))
+daysummary2b$weekday <- sapply(daysummary2b$weekday, function(x)
+                                ifelse(x,"Weekday","Weekend"))
 
+maxmsteps <- filter(daysummary2,msteps==max(msteps))
+nbtext <- paste("  NB: Maximum (average \n  in a 5 minute interval) \n  is", 
+                signif(maxmsteps$msteps,3),
+                "steps at",maxmsteps$timeperiod)
 
+# convert timeperiod into date/time format for graphing
+maxmsteps$timeperiod=strptime(maxmsteps$timeperiod,format="%H:%M")
+daysummary2$timeperiod=strptime(daysummary2$timeperiod,format="%H:%M")
 ```
-## $title
-## [1] "Number of steps each interval"
-## 
-## attr(,"class")
-## [1] "labels"
-```
+
+
+## Daily pattern of activity (imputed values)?
 
 ![](PA1_Activity_files/figure-html/unnamed-chunk-7-1.png) 
 
+## What is total number of steps taken per day (imputed values)?
+
+Visualising the number of steps each day after replacing NAs with the mean number of steps for that interval across days, shows a different pattern. As can be seen in the graph below, the median number of steps per day follows a pattern closer to the mean. 
+
+The pattern of median number of steps per interval still varies from the mean number of steps per interval because of the number of 0 values recorded for some intervals. Without a better understanding of the recording mechanism it is unclear whether it would be appropriate to replace '0' values wiht the mean values.
+
+The total number of steps, and the mean and median number of steps taken per day after replacing NAs with the mean values for that interval, are shown below:
+
+![](PA1_Activity_files/figure-html/unnamed-chunk-8-1.png) 
+
+
 
 ## Are there differences in activity patterns between weekdays and weekends?
+
+The graph below visualises the different activities patterns between weekdays and weekends. As might be expected, there is less activty on the weekends and more activity (measured in total number of steps for each interval) on weekdays.
+
+![](PA1_Activity_files/figure-html/unnamed-chunk-9-1.png) 
 
