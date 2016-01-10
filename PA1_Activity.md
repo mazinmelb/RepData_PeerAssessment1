@@ -7,8 +7,6 @@ This report is considering the activity data recorded by a device collecting dat
 
 
 
-
-
 ## Loading and preprocessing the data
 
 The data has been cleaned and transformed to facilitate visualisation and analysis. The time and date details have been converted into a 'r' date format (POSIXct) and there is a boolean field set to true for weekdays and false for weekends. 
