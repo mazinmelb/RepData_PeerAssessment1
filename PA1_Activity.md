@@ -66,16 +66,13 @@ daysummary$timeperiod=strptime(daysummary$timeperiod,format="%H:%M")
 ```
 
 
-
-
-
 # Summary of steps per day
 
-## What is total and summarised number of steps taken per day (ignore NAs)?
+## Total, the mean and the median steps per day (ignore NAs)
 
 Visualising the number of steps each day highlights the missing values. As can be seen in the graph below, the median number of steps per day is significantly affected by the missing data. The total number of steps, and the mean and median number of steps taken per day is shown below:
 
-![](PA1_Activity_files/figure-html/unnamed-chunk-4-1.png) 
+![](PA1_Activity_files/figure-html/unnamed-chunk-4-1.png) ![](PA1_Activity_files/figure-html/unnamed-chunk-4-2.png) 
 
 
 # Summary of daily activity pattern
@@ -134,11 +131,11 @@ daysummary2$timeperiod=strptime(daysummary2$timeperiod,format="%H:%M")
 ```
 
 
-## Daily pattern of activity (imputed values)?
+## Daily pattern of activity (imputed values)
 
 ![](PA1_Activity_files/figure-html/unnamed-chunk-7-1.png) 
 
-## What is total number of steps taken per day (imputed values)?
+## Total number of steps taken per day (imputed values)
 
 Visualising the number of steps each day after replacing NAs with the mean number of steps for that interval across days, shows a different pattern. As can be seen in the graph below, the median number of steps per day follows a pattern closer to the mean. 
 
@@ -146,7 +143,7 @@ The pattern of median number of steps per interval still varies from the mean nu
 
 The total number of steps, and the mean and median number of steps taken per day after replacing NAs with the mean values for that interval, are shown below:
 
-![](PA1_Activity_files/figure-html/unnamed-chunk-8-1.png) 
+![](PA1_Activity_files/figure-html/unnamed-chunk-8-1.png) ![](PA1_Activity_files/figure-html/unnamed-chunk-8-2.png) 
 
 
 
